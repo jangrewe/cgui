@@ -1,0 +1,27 @@
+<?php
+
+// Go to https://github.com/jangrewe/cgui for instructions
+
+$timezone = "Europe/Berlin";
+date_default_timezone_set($timezone);
+
+$rig = array(
+	"miner1.example.com" => "192.168.0.101",
+	"miner2.example.com" => "192.168.0.102",
+);
+
+$config = array(
+	"Temperature" => array(80, 84),
+	"Fan" => array(85, 90),
+	"Rejects" => array(7, 10),
+	"Discards" => array(7, 10),
+	"Stales" => array(7, 10)
+);
+
+$apis = array(
+	"Example Pool" => "https://btc.example.com/accounts/profile/json/1234-98d76c5432e12d3245aeba6708b9abc"
+);
+
+$fahrenheit = false;
+
+?>

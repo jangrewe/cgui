@@ -1,49 +1,21 @@
 <?php
-	
-	// Config
-	// Go to https://github.com/nehalvpatel/cgui for instructions
-	$timezone = "America/Chicago";
-	date_default_timezone_set($timezone);
-	
-	$rig = array(
-		"Name" => "",
-		"Address" => "",
-		"Port" => ""
-	);
-	
-	$config = array(
-		"Temperature" => array(80, 84),
-		"Fan" => array(85, 90),
-		"Rejects" => array(7, 10),
-		"Discards" => array(7, 10),
-		"Stales" => array(7, 10)
-	);
-	
-	$apis = array(
-		
-	);
-	
-	$fahrenheit = false;
-	
-	require_once("class.cgminer.php");
-	
-	$rig_api = new cgminerPHP($rig["Address"], $rig["Port"]);
-	
-	$rig_summary = $rig_api->request("summary");
-	$rig_config = $rig_api->request("config");
-	$rig_coin = $rig_api->request("coin");
-	
-	$gpu_count = $rig_config["CONFIG"]["GPU Count"];
-	$pool_count = $rig_config["CONFIG"]["Pool Count"];
-	$coin = $rig_coin["COIN"]["Hash Method"];
-	
+
+if(!file_exists('config.php')) {
+	echo "Please copy config.php.example to config.php and adjust the settings.";
+	die;
+}else{
+	require_once("config.php");
+}
+require_once("class.cgminer.php");
+require_once("func.php");
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-		<meta name="author" content="Nehal Patel">
+		<meta name="author" content="Jan Grewe">
 		<link href="css/bootstrap.min.css" rel="stylesheet">
 		<link href="css/bootstrap-responsive.min.css" rel="stylesheet">
 		<link href="css/main.css" rel="stylesheet">
@@ -53,48 +25,32 @@
 		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="touch-icon-ipad-144.png">
 		<link rel="icon" href="favicon.png">
 		<!--[if IE]><link rel="shortcut icon" href="favicon.ico"><![endif]-->
-		<title><?php if (isset($rig["Name"]) && !empty($rig["Name"])) { echo $rig["Name"]; } else { echo $rig["Address"] . ":" . $rig["Port"]; } ?></title>
+		<title>cgminer UI</title>
 	</head>
 	<body>
 		<div class="container" id="no-more-tables">
-			<h1 class="info-header page-title" style=""><?php if (isset($rig["Name"]) && !empty($rig["Name"])) { echo $rig["Name"]; } else { echo $rig["Address"] . ":" . $rig["Port"]; } ?></h1>
-			<hr>
-			<h1 class="info-header">Stats</h1>
-			<div class="well well-small info-block">
-				<strong>Date:</strong> <?php echo date("M j, Y h:i:s A") . PHP_EOL; ?>
-				<hr style="margin-top: 5px; margin-bottom: 5px;">
-				<strong>Started:</strong> <?php
-					$seconds_elapsed = $rig_summary["SUMMARY"]["Elapsed"];
-					$started = time() - $seconds_elapsed;
-					echo '<time datetime="' . date(DATE_W3C, $started) . '">';
-					echo date("M j, Y h:i:s A", $started) . '</time>' . PHP_EOL;
-				?>
-				<br>
-				<strong>Elapsed:</strong> <?php
-					$time_units = array(
-						'w' => 604800,
-						'd' => 86400,
-						'h' => 3600,
-						'm' => 60,
-						's' => 1
-					);
 
-					$strs = array();
+<?php 
+foreach($rigs as $name=>$addr) {
+?>
+			<h3 class="info-header"><?php echo $name; ?></h3>
+<?php
+	$rig_api = new cgminerPHP($addr, '4028');
 
-					foreach ($time_units as $name => $int) {
-						if ($seconds_elapsed < $int)
-							continue;
-						$num = (int) ($seconds_elapsed / $int);
-						$seconds_elapsed = $seconds_elapsed % $int;
-						$strs[] = sprintf("%02d", $num) . $name;
-					}
+	$rig_summary = $rig_api->request("summary");
+	$rig_config = $rig_api->request("config");
+	$rig_coin = $rig_api->request("coin");
 
-					echo implode(' ', $strs);
-					echo PHP_EOL;
-				?>
-			</div>
-<?php if ($gpu_count > 0) { ?>
-			<h1 class="info-header">Mining</h1>
+	$gpu_count = $rig_config["CONFIG"]["GPU Count"];
+	$pga_count = $rig_config["CONFIG"]["PGA Count"];
+	$pool_count = $rig_config["CONFIG"]["Pool Count"];
+	$coin = $rig_coin["COIN"]["Hash Method"];
+	
+
+if ($gpu_count > 0) { 
+	$gpu_info = get_info('gpu', $gpu_count);		
+?>
+			<h4 class="info-header">GPUs</h4>
 			<table class="table table-striped table-bordered table-hover info-block">
 				<thead>
 					<tr>
@@ -111,83 +67,87 @@
 					</tr>
 				</thead>
 				<tbody>
-<?php
-						$total_rate = 0;
-						$total_errors = 0;
-						
-						for ($i = 0; $i < $gpu_count; $i++) {
-							$gpu_request = $rig_api->request("gpu|" . $i);
-							$gpu_info = $gpu_request["GPU" . $i];
-							
-							$average_rate = 0;
-							if (isset($gpu_info["MHS 5s"])) {
-								$average_rate = $gpu_info["MHS 5s"];
-							} elseif (isset($gpu_info["MHS 1s"])) {
-								$average_rate = $gpu_info["MHS 1s"];
-							}
-							
-							if ($coin == "scrypt") {
-								$hash_rate = $average_rate * 1000;
-								$hash_speed = "kh/s";
-							} elseif ($coin == "sha256") {
-								$hash_rate = $average_rate;
-								$hash_speed = "Mh/s";
-							}
-							
-							$total_rate += $hash_rate;
-							$total_errors += $gpu_info["Hardware Errors"];
-							
-							if ($gpu_info["Temperature"] >= $config["Temperature"][1]) {
-								$temperature_class = "error";
-							} elseif ($gpu_info["Temperature"] >= $config["Temperature"][0]) {
-								$temperature_class = "warning";
-							} else {
-								$temperature_class = "";
-							}
-							
-							if ($gpu_info["Fan Percent"] >= $config["Fan"][1]) {
-								$fan_class = "error";
-							} elseif ($gpu_info["Fan Percent"] >= $config["Fan"][0]) {
-								$fan_class = "warning";
-							} else {
-								$fan_class = "";
-							}
-							
+					<?php
+					for($i = 0; $i < $gpu_count; $i++) {
 					?>
 					<tr>
-						<td data-title="Status"><?php if ($gpu_info["Status"] == "Alive" && $gpu_info["Enabled"] == "Y") { ?><i class="icon-ok-sign"></i><?php } else { ?><i class="icon-remove-sign"></i><?php } ?></td>
-						<td data-title="GPU"><?php echo $gpu_info["GPU"] + 1; ?></td>
-						<td data-title="Rate"><?php echo $hash_rate . $hash_speed ?></td>
-						<td data-title="Temp" class="<?php echo $temperature_class; ?>"><?php if ($fahrenheit === true) { echo sprintf("%02.2f", (9/5) * $gpu_info["Temperature"] + 32) . "°F"; } else { echo $gpu_info["Temperature"] . "°C"; } ?></td>
-						<td data-title="Fan Speed"><?php echo $gpu_info["Fan Speed"]; ?></td>
-						<td data-title="Fan Percent" class="<?php echo $fan_class; ?>"><?php echo $gpu_info["Fan Percent"]; ?>%</td>
-						<td data-title="GPU Clock"><?php echo $gpu_info["GPU Clock"]; ?></td>
-						<td data-title="Memory Clock"><?php echo $gpu_info["Memory Clock"]; ?></td>
-						<td data-title="Intensity"><?php echo $gpu_info["Intensity"]; ?></td>
-						<td data-title="HW Errors"><?php echo $gpu_info["Hardware Errors"]; ?></td>
+						<td data-title="Status"><?php if ($gpu_info[$i]["status"] == "Alive" && $gpu_info[$i]["enabled"] == "Y") { ?><i class="icon-ok-sign"></i><?php } else { ?><i class="icon-remove-sign"></i><?php } ?></td>
+						<td data-title="GPU"><?php echo $i + 1; ?></td>
+						<td data-title="Rate"><?php echo $gpu_info[$i]["hash_rate"].' '.$gpu_info["hash_speed"] ?></td>
+						<td data-title="Temp" class="<?php echo $gpu_info[$i]['temp_class']; ?>"><?php if ($fahrenheit === true) { echo sprintf("%02.2f", (9/5) * $gpu_info[$i]["temp"] + 32) . "°F"; } else { echo $gpu_info[$i]["temp"] . "°C"; } ?></td>
+						<td data-title="Fan Speed"><?php echo $gpu_info[$i]["fan_speed"]; ?></td>
+						<td data-title="Fan Percent" class="<?php echo $gpu_info[$i]['fan_class']; ?>"><?php echo $gpu_info[$i]["fan_percent"]; ?>%</td>
+						<td data-title="GPU Clock"><?php echo $gpu_info[$i]["gpu_clock"]; ?></td>
+						<td data-title="Memory Clock"><?php echo $gpu_info[$i]["mem_clock"]; ?></td>
+						<td data-title="Intensity"><?php echo $gpu_info[$i]["intensity"]; ?></td>
+						<td data-title="HW Errors"><?php echo $gpu_info[$i]["hw_errors"]; ?></td>
 					</tr>
-<?php
-						}
-					?>
+					<?php } ?>
 				</tbody>
 				<tfoot>
 					<tr>
 						<td class="total-text"><strong>Total:</strong></td>
 						<td data-title="GPU"><?php echo $gpu_count; ?></td>
-						<td data-title="Rate"><?php echo $total_rate . $hash_speed; ?></td>
+						<td data-title="Rate"><?php echo $gpu_info['total_rate'].' '.$gpu_info['hash_speed']; ?></td>
 						<td class="dont-display"></td>
 						<td class="dont-display"></td>
 						<td class="dont-display"></td>
 						<td class="dont-display"></td>
 						<td class="dont-display"></td>
 						<td class="dont-display"></td>
-						<td data-title="HW Errors"><?php echo $total_errors; ?></td>
+						<td data-title="HW Errors"><?php echo $gpu_info['total_errors']; ?></td>
 					</tr>
 				</tfoot>
 			</table>
-<?php } ?>
-<?php if ($pool_count > 0) { ?>
-			<h1 class="info-header">Pools</h1>
+<?php 
+} 
+if ($pga_count > 0) { 
+	$pga_info = get_info('pga', $pga_count);
+?>
+			<h4 class="info-header">FPGAs</h4>
+			<table class="table table-striped table-bordered table-hover info-block">
+				<thead>
+					<tr>
+						<th>Status</th>
+						<th>FPGA</th>
+						<th>Rate</th>
+						<th>Temp</th>
+						<th>Frequency</th>
+						<th>HW Errors</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					for($i = 0; $i < $pga_count; $i++) {
+					?>
+					<tr>
+						<td data-title="Status"><?php if ($pga_info[$i]["status"] == "Alive" && $pga_info[$i]["enabled"] == "Y") { ?><i class="icon-ok-sign"></i><?php } else { ?><i class="icon-remove-sign"></i><?php } ?></td>
+						<td data-title="FPGA"><?php echo $i + 1; ?></td>
+						<td data-title="Rate"><?php echo $pga_info[$i]["hash_rate"].' '.$pga_info["hash_speed"] ?></td>
+						<td data-title="Temp" class="<?php echo $pga_info[$i]["temp_class"]; ?>"><?php if ($fahrenheit === true) { echo sprintf("%02.2f", (9/5) * $pga_info[$i]["temp"] + 32) . "°F"; } else { echo $pga_info[$i]["temp"] . "°C"; } ?></td>
+						<td data-title="Frequency"><?php echo $gpu_info[$i]["freq"]; ?></td>
+						<td data-title="HW Errors"><?php echo $pga_info[$i]["hw_errors"]; ?></td>
+					</tr>
+					<?php
+					}
+					?>
+				</tbody>
+				<tfoot>
+					<tr>
+						<td class="total-text"><strong>Total:</strong></td>
+						<td data-title="FPGA"><?php echo $pga_count; ?></td>
+						<td data-title="Rate"><?php echo $pga_info['total_rate'].' '.$pga_info['hash_speed']; ?></td>
+						<td class="dont-display"></td>
+						<td class="dont-display"></td>
+						<td data-title="HW Errors"><?php echo $pga_info['total_errors']; ?></td>
+					</tr>
+				</tfoot>
+			</table>
+			
+<?php } 
+
+if ($pool_count > 0) { ?>
+			<h3 class="info-header">Pools</h3>
 			<table class="table table-striped table-bordered table-hover info-block">
 				<thead>
 					<tr>
@@ -212,7 +172,7 @@
 						
 						for ($i = 0; $i < $pool_count; $i++) {
 							$rig_pool = $rig_api->request("pools");
-							
+														
 							$total_accepted += $rig_pool["POOL" . $i]["Accepted"];
 							$total_rejected += $rig_pool["POOL" . $i]["Rejected"];
 							$total_discarded += $rig_pool["POOL" . $i]["Discarded"];
@@ -284,10 +244,10 @@
 					</tr>
 				</tfoot>
 			</table>
-<?php } ?>
-			<footer>
-				<div style="text-align: center; margin-bottom: 20px;"><a href="http://www.itspatel.com/">itsPATEL.com</a></div>
-			</footer>
+<?php } 
+}
+?>
+
 		</div>
 		<script src="http://code.jquery.com/jquery-latest.js"></script>
 		<script src="js/bootstrap.min.js"></script>
