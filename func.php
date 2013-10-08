@@ -6,6 +6,8 @@ function get_info($type, $count) {
 	global $coin;
 
 	$output = array();
+	
+	$info = $request[strtoupper($type) . $i];
 	$output['total_rate'] = 0;
 	$output['total_errors'] = 0;
 	
@@ -39,8 +41,13 @@ function get_info($type, $count) {
 			$output[$i]['hash_rate'] = $average_rate * 1000;
 			$output['hash_speed'] = "kh/s";
 		} elseif ($coin == "sha256") {
-			$output[$i]['hash_rate'] = $average_rate;
-			$output['hash_speed'] = "Mh/s";
+			if(floor($average_rate) >= 1000) {
+				$output[$i]['hash_rate'] = round($average_rate/1000, 2);
+				$output['hash_speed'] = "Gh/s";
+			}else{
+				$output[$i]['hash_rate'] = $average_rate;
+				$output['hash_speed'] = "Mh/s";
+			}
 		}
 		
 		$output['total_rate'] 		+= $output[$i]['hash_rate'];
@@ -64,12 +71,7 @@ function get_info($type, $count) {
 			}
 		}
 	}
-	/*
-	echo "<pre>";
-	print_r($info);
-	print_r($output);
-	echo "</pre>";
-	*/
+	
 	return $output;
 	
 }

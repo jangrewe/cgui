@@ -41,14 +41,97 @@ foreach($rigs as $name=>$addr) {
 	$rig_config = $rig_api->request("config");
 	$rig_coin = $rig_api->request("coin");
 
-	$gpu_count = $rig_config["CONFIG"]["GPU Count"];
+	$asc_count = $rig_config["CONFIG"]["ASC Count"];
 	$pga_count = $rig_config["CONFIG"]["PGA Count"];
+	$gpu_count = $rig_config["CONFIG"]["GPU Count"];
 	$pool_count = $rig_config["CONFIG"]["Pool Count"];
 	$coin = $rig_coin["COIN"]["Hash Method"];
-	
 
-if ($gpu_count > 0) { 
-	$gpu_info = get_info('gpu', $gpu_count);		
+if ($asc_count > 0) { 
+	$asc_info = get_info('asc', $asc_count);
+?>
+			<h4 class="info-header">ASICs</h4>
+			<table class="table table-striped table-bordered table-hover info-block">
+				<thead>
+					<tr>
+						<th>Status</th>
+						<th>ASIC</th>
+						<th>Rate</th>
+						<th>Temp</th>
+						<th>HW Errors</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					for($i = 0; $i < $asc_count; $i++) {
+					?>
+					<tr>
+						<td data-title="Status"><?php if ($asc_info[$i]["status"] == "Alive" && $asc_info[$i]["enabled"] == "Y") { ?><i class="icon-ok-sign"></i><?php } else { ?><i class="icon-remove-sign"></i><?php } ?></td>
+						<td data-title="GPU"><?php echo $i + 1; ?></td>
+						<td data-title="Rate"><?php echo $asc_info[$i]["hash_rate"].' '.$asc_info["hash_speed"] ?></td>
+						<td data-title="Temp" class="<?php echo $asc_info[$i]['temp_class']; ?>"><?php if ($fahrenheit === true) { echo sprintf("%02.2f", (9/5) * $asc_info[$i]["temp"] + 32) . "°F"; } else { echo $asc_info[$i]["temp"] . "°C"; } ?></td>
+						<td data-title="HW Errors"><?php echo $asc_info[$i]["hw_errors"]; ?></td>
+					</tr>
+					<?php } ?>
+				</tbody>
+				<tfoot>
+					<tr>
+						<td class="total-text"><strong>Total:</strong></td>
+						<td data-title="GPU"><?php echo $asc_count; ?></td>
+						<td data-title="Rate"><?php echo $asc_info['total_rate'].' '.$asc_info['hash_speed']; ?></td>
+						<td class="dont-display"></td>
+						<td data-title="HW Errors"><?php echo $asc_info['total_errors']; ?></td>
+					</tr>
+				</tfoot>
+			</table>
+<?php 
+}
+
+if ($pga_count > 0) { 
+	$pga_info = get_info('pga', $pga_count);
+?>
+			<h4 class="info-header">FPGAs</h4>
+			<table class="table table-striped table-bordered table-hover info-block">
+				<thead>
+					<tr>
+						<th>Status</th>
+						<th>FPGA</th>
+						<th>Rate</th>
+						<th>Temp</th>
+						<th>HW Errors</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					for($i = 0; $i < $pga_count; $i++) {
+					?>
+					<tr>
+						<td data-title="Status"><?php if ($pga_info[$i]["status"] == "Alive" && $pga_info[$i]["enabled"] == "Y") { ?><i class="icon-ok-sign"></i><?php } else { ?><i class="icon-remove-sign"></i><?php } ?></td>
+						<td data-title="FPGA"><?php echo $i + 1; ?></td>
+						<td data-title="Rate"><?php echo $pga_info[$i]["hash_rate"].' '.$pga_info["hash_speed"] ?></td>
+						<td data-title="Temp" class="<?php echo $pga_info[$i]["temp_class"]; ?>"><?php if ($fahrenheit === true) { echo sprintf("%02.2f", (9/5) * $pga_info[$i]["temp"] + 32) . "°F"; } else { echo $pga_info[$i]["temp"] . "°C"; } ?></td>
+						<td data-title="HW Errors"><?php echo $pga_info[$i]["hw_errors"]; ?></td>
+					</tr>
+					<?php
+					}
+					?>
+				</tbody>
+				<tfoot>
+					<tr>
+						<td class="total-text"><strong>Total:</strong></td>
+						<td data-title="FPGA"><?php echo $pga_count; ?></td>
+						<td data-title="Rate"><?php echo $pga_info['total_rate'].' '.$pga_info['hash_speed']; ?></td>
+						<td class="dont-display"></td>
+						<td data-title="HW Errors"><?php echo $pga_info['total_errors']; ?></td>
+					</tr>
+				</tfoot>
+			</table>
+			
+<?php 
+}
+
+if ($gpu_count > 0) {
+	$gpu_info = get_info('gpu', $gpu_count);
 ?>
 			<h4 class="info-header">GPUs</h4>
 			<table class="table table-striped table-bordered table-hover info-block">
@@ -100,51 +183,7 @@ if ($gpu_count > 0) {
 				</tfoot>
 			</table>
 <?php 
-} 
-if ($pga_count > 0) { 
-	$pga_info = get_info('pga', $pga_count);
-?>
-			<h4 class="info-header">FPGAs</h4>
-			<table class="table table-striped table-bordered table-hover info-block">
-				<thead>
-					<tr>
-						<th>Status</th>
-						<th>FPGA</th>
-						<th>Rate</th>
-						<th>Temp</th>
-						<th>Frequency</th>
-						<th>HW Errors</th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php
-					for($i = 0; $i < $pga_count; $i++) {
-					?>
-					<tr>
-						<td data-title="Status"><?php if ($pga_info[$i]["status"] == "Alive" && $pga_info[$i]["enabled"] == "Y") { ?><i class="icon-ok-sign"></i><?php } else { ?><i class="icon-remove-sign"></i><?php } ?></td>
-						<td data-title="FPGA"><?php echo $i + 1; ?></td>
-						<td data-title="Rate"><?php echo $pga_info[$i]["hash_rate"].' '.$pga_info["hash_speed"] ?></td>
-						<td data-title="Temp" class="<?php echo $pga_info[$i]["temp_class"]; ?>"><?php if ($fahrenheit === true) { echo sprintf("%02.2f", (9/5) * $pga_info[$i]["temp"] + 32) . "°F"; } else { echo $pga_info[$i]["temp"] . "°C"; } ?></td>
-						<td data-title="Frequency"><?php echo $gpu_info[$i]["freq"]; ?></td>
-						<td data-title="HW Errors"><?php echo $pga_info[$i]["hw_errors"]; ?></td>
-					</tr>
-					<?php
-					}
-					?>
-				</tbody>
-				<tfoot>
-					<tr>
-						<td class="total-text"><strong>Total:</strong></td>
-						<td data-title="FPGA"><?php echo $pga_count; ?></td>
-						<td data-title="Rate"><?php echo $pga_info['total_rate'].' '.$pga_info['hash_speed']; ?></td>
-						<td class="dont-display"></td>
-						<td class="dont-display"></td>
-						<td data-title="HW Errors"><?php echo $pga_info['total_errors']; ?></td>
-					</tr>
-				</tfoot>
-			</table>
-			
-<?php } 
+}
 
 if ($pool_count > 0) { ?>
 			<h3 class="info-header">Pools</h3>
