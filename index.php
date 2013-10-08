@@ -9,6 +9,19 @@ if(!file_exists('config.php')) {
 require_once("class.cgminer.php");
 require_once("func.php");
 
+if(isset($_GET['api']) && $_GET['api'] != '') {
+	if(!$_GET['rig']) {
+		$addr = current($rigs);
+	}else{
+		$addr = $rigs[$_GET['rig']];
+	}
+	$rig_api = new cgminerPHP($addr, '4028');
+	echo "<pre>";
+	print_r($rig_api->request($_GET['api']));
+	echo "<pre>";
+	die;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -35,8 +48,8 @@ foreach($rigs as $name=>$addr) {
 ?>
 			<h3 class="info-header"><?php echo $name; ?></h3>
 <?php
-	$rig_api = new cgminerPHP($addr, '4028');
 
+	$rig_api = new cgminerPHP($addr, '4028');
 	$rig_summary = $rig_api->request("summary");
 	$rig_config = $rig_api->request("config");
 	$rig_coin = $rig_api->request("coin");
