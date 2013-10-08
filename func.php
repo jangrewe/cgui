@@ -4,6 +4,7 @@ function get_info($type, $count) {
 
 	global $rig_api;
 	global $coin;
+	global $config;
 
 	$output = array();
 	
