@@ -17,7 +17,8 @@ if(isset($_GET['api']) && $_GET['api'] != '') {
 	}
 	$rig_api = new cgminerPHP($addr, '4028');
 	echo "<pre>";
-	print_r($rig_api->request($_GET['api']));
+	//print_r($rig_api->request($_GET['api']));
+	echo str_replace('0x0a', "\n", $rig_api->request(stats)['STATS0']['GetInfo']);
 	echo "<pre>";
 	die;
 }
@@ -254,17 +255,28 @@ if ($pool_count > 0) { ?>
 								$stales_class = "";
 							}
 							
-							$confirmed_rewards = "N/A";
+							$confirmed_reward = "N/A";
 							$pool_data = parse_url($rig_pool["POOL" . $i]["URL"]);
 							if (isset($apis[$pool_data["host"]])) {
 								$api_data = json_decode(file_get_contents($apis[$pool_data["host"]]), true);
-								if (isset($api_data["confirmed_rewards"])) {
-									$confirmed_rewards = $api_data["confirmed_rewards"];
-									if ($total_confirmed == "N/A") {
-										$total_confirmed = $confirmed_rewards;
-									} else {
-										$total_confirmed += $confirmed_rewards;
-									}
+								
+								// slush's pool
+								if (isset($api_data["confirmed_reward"])) {
+									$confirmed_reward = $api_data["confirmed_reward"];
+									
+								// BTC Guild
+								}elseif (isset($api_data["user"]["unpaid_rewards"])) {
+									$confirmed_reward = $api_data["user"]["unpaid_rewards"];
+									
+								// P2Pool
+								}elseif (isset($api_data[$rig_pool["POOL" . $i]["User"]])) {
+									$confirmed_reward = $api_data[$rig_pool["POOL" . $i]["User"]];
+								}
+								
+								if ($total_confirmed == "N/A" && $confirmed_reward != "N/A") {
+									$total_confirmed = $confirmed_reward;
+								} else {
+									$total_confirmed += $confirmed_reward;
 								}
 							}
 							
@@ -274,7 +286,7 @@ if ($pool_count > 0) { ?>
 						<td data-title="Pool"><?php echo $i + 1; ?></td>
 						<td data-title="URL" class="long-data"><?php echo $rig_pool["POOL" . $i]["URL"]; ?></td>
 						<td data-title="User"><?php echo $rig_pool["POOL" . $i]["User"]; ?></td>
-						<td data-title="Confirmed"><?php echo $confirmed_rewards; ?></td>
+						<td data-title="Confirmed"><?php echo $confirmed_reward; ?></td>
 						<td data-title="Accepted"><?php echo $rig_pool["POOL" . $i]["Accepted"]; ?></td>
 						<td data-title="Rejected" class="<?php echo $rejects_class; ?>"><?php echo $rig_pool["POOL" . $i]["Rejected"]; ?></td>
 						<td data-title="Discarded" class="<?php echo $discards_class; ?>"><?php echo $rig_pool["POOL" . $i]["Discarded"]; ?></td>

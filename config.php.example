@@ -19,7 +19,10 @@ $config = array(
 );
 
 $apis = array(
-	"Example Pool" => "https://btc.example.com/accounts/profile/json/1234-98d76c5432e12d3245aeba6708b9abc"
+	"stratum.example.com" => "https://btc.example.com/accounts/profile/json/1234-98d76c5432e12d3245aeba6708b9abc"
+	// "stratum.bitcoin.cz" => "https://mining.bitcoin.cz/accounts/profile/json/1234-98d76c5432e12d3245aeba6708b9abc",
+	// "eu-stratum.btcguild.com"	=> "https://www.btcguild.com/api.php?api_key=98d76c5432e12d3245aeba6708b9abc",
+	// "example.com" => "http://example.com:9332/current_payouts"
 );
 
 $fahrenheit = false;
